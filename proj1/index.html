@@ -1,7 +1,180 @@
-<html>
-	<head>
-	</head>
-	<body>
-		Project 1 here
-	</body>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>
+  body {
+    padding: 100px;
+    width: 1000px;
+    margin: auto;
+    text-align: left;
+    font-weight: 300;
+    font-family: 'Open Sans', sans-serif;
+    color: #121212;
+  }
+  h1, h2, h3, h4 {
+    font-family: 'Source Sans Pro', sans-serif;
+  }
+</style>
+<title>CS 184 Rasterizer</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+</head>
+
+
+<body>
+
+<h1 align="middle">CS 184: Computer Graphics and Imaging, Spring 2018</h1>
+<h1 align="middle">Project 1: Rasterizer</h1>
+<h2 align="middle">Anders Museth, CS184</h2>
+
+<br><br>
+
+    <div>
+
+        <h2 align="middle">Overview</h2>
+        <p>In this project I implemented a basic rasterizer, which included drawing triangles, super sampling, transforming points and vectors, Barycentric interpolation and coordinates, texture mapping, and using mipmaps for texture mapping. This project gave me a much stronger grasp on the fundamental concepts introduced so far in the computer graphics course. I especially enjoyed implementing supersampling and observing how it acts as a low-pass filter  on images, thereby removing aliasing artifacts that result from having high-frequency details present in images with insufficient pixel resolution. Another part of the project that I thoroughly enjoyed was barycentric coordinates, both due to its elegant ability to perform interpolation, but also for the general versatility of this coordinate system. All in all, I had a blast working on this project!</p>
+        <h2 align="middle">Section I: Rasterization</h2>
+
+        <h3 align="middle">Part 1: Rasterizing single-color triangles</h3>
+
+        <p>The first step in my program is to compute the normal vectors for each of the three edges of the triangle. Then I check that the normal points towards the inside of the triangle. To do this, I ensure that the dot product of the normal vector and the third unused point is greater than 0. I repeat this for all three edges. Next, I loop through every point in the x and y axis within the bounding box of the triangle. This bounding box is created by finding the minimum and maximum x and y values of all three points. At each discrete point (+0.5 to check the center of the pixel) in the loop, I check whether the point is inside the triangle by taking the dot product of the point with each of the precomputed normal vectors and ensuring that all three dot products are greater than or equal to 0. If this is true, fill in that pixel with the desired color. Because my algorithm only loops through the bounding box, it is not any slower than an algorithm that checks every sample point within the bounding box of the triangle. </p>
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td>
+                        <img src="images/task1.png" align="middle" width="400px" />
+                        <figcaption align="middle">Screenshot of basic/test4.svg. As shown by the pixel inspector there is a small hole in the triangle since it is so thin</figcaption>
+                    </td>
+                    <td>
+                        <img src="images/task12.png" align="middle" width="400px" />
+                        <figcaption align="middle">Screenshot of basic/test5.svg. As shown by the pixel inspector there is are jaggies on the edge of the cube</figcaption>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <img src="images/Task1Extra.png" align="middle" width="400px" />
+                        <figcaption align="middle">Table for speed comparisons. As shown by the table the highest speed up was the hardcore test 2 where there was a 25x speed up on high resolutions</figcaption>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <p>I significantly improved the speed of triangle rasterization by implementing a second method, which involves rasterizing lines using Bresenham's method, which is already implemented. I stored each pixel generated using this method in a map that takes the y-coordinate as the key and maps it to a dynamic vector of x-coordinate values. Once all the lines have been rasterized, I iterate through each key-value pairing in the map and sort the x-coordinate vectors. Then, I loop through the sorted x-coordinates from the lowest value to the highest value and rasterize each pixel with the corresponding y-coordinate key. This approach eliminates the need to check whether each pixel is within the triangle, resulting in much faster rasterization. The highest increase being x25 for hardcore/test2.</p>
+
+        <h3 align="middle">Part 2: Antialiasing triangles</h3>
+        <p>To enable supersampling, the first step was to adjust the sample buffer to the appropriate size (width * height * sample_rate). Then, I modified the RasterizerImp::resolve_to_framebffuer function by including two additional loops that average the values of sqrt(sample rate) x sqrt(sample rate) pixels along the x and y axes. This approach enables us to simulate more pixels than we have, with the averaging process restoring the image to its actual resolution. This method acts as a low-pass filter (albeit imperfect), reducing artifacts and producing slightly blurred images. Finally, I updated the RasterizerImp::rasterize_triangle function by increasing the number of samples per x,y coordinate to the sample rate. Instead of adding 0.5 to obtain the center, I added (the current sample number + 0.5) / sqrt(sample rate). For instance, for the rst sample with a sample rate of 4, I added 0.5 / 2 to each axis, then added 1.5 / 2 to x and 0.5 / 2 to y, and so on.</p>
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td>
+                        <img src="images/task21.png" align="middle" width="400px" />
+                        <figcaption align="middle">Screenshot of basic/test4.svg at supersample rate of 1. As shown by the pixel inspector there is a small hole in the triangle since it is so thin</figcaption>
+                    </td>
+
+                    <td>
+                        <img src="images/task24.png" align="middle" width="400px" />
+                        <figcaption align="middle">Screenshot of basic/test4.svg at supersample rate of 4. As shown by the pixel inspector the triangle's hole got slightly filled in.</figcaption>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <img src="images/task216.png" align="middle" width="400px" />
+                        <figcaption align="middle">Screenshot of basic/test4.svg at supersample rate of 4. As shown by the pixel inspector the triangle is fully connected and all the shapes have been smoothed out and jaggies are mostly fixed.</figcaption>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <h3 align="middle">Part 3: Transforms</h3>
+        <div align="middle">
+            <img src="images/Task3.png" align="middle" width="400px" />
+            <figcaption align="middle">Screen shot of my robot serving a volley ball</figcaption>
+        </div>
+
+
+        <h2 align="middle">Section II: Sampling</h2>
+
+        <h3 align="middle">Part 4: Barycentric coordinates</h3>
+        <p>Barycentric coordinates is a mathematical technique used to represent a point on the face of a triangle (or more generally the volume of a tetrahedron) by expressing its location as a combination of weights that are based on the distances to the vertices of a given triangle. These weights are determined by the areas of the smaller triangles formed by connecting the point of interest to two vertices that are opposite to the vertex being considered. By dividing this area by the area of the entire triangle, the weight for that vertex is obtained. When the point coincides with a vertex of the triangle, the weight assigned to that vertex is 1, while the other two are assigned 0. To visualize this we can refer to the triangle below. The triangle's color is determined by the sum of the RGB values assigned to each vertex multiplied by their respective barycentric weights. Points in close proximity to a specific vertex will have a higher weight for the corresponding color, making it more pronounced in the final result. For instance, if a point is near the red vertex in the image below, the weight assigned to the red component will be higher, resulting in a more vibrant red color.</p>
+        <div align="middle">
+            <img src="images/Task4.png" align="middle" width="400px" />
+            <figcaption align="middle">Screen shot of barycentric interpilation where each vertex has a color assigned red, green, and blue.</figcaption>
+        </div>
+        <p>Using Barycentric Interpilation we can create a very smooth color wheel :)</p>
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td>
+                        <img src="images/Task41.png" align="middle" width="400px" />
+                        <figcaption align="middle">Screenshot of basic/test7.svg at supersample rate of 1.</figcaption>
+                    </td>
+
+                    <td>
+                        <img src="images/Task416.png" align="middle" width="400px" />
+                        <figcaption align="middle">Screenshot of basic/test7.svg at supersample rate of 16.</figcaption>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <h3 align="middle">Part 5: "Pixel sampling" for texture mapping</h3>
+        <p>
+            When implementing pixel sampling for texture mapping, the first step is to convert the pixel being sampled from its (x,y) coordinates to (u,v) coordinates, which correspond to the coordinates on the texture map. To achieve this, the Barycentric Coordinates for the (x,y) point are calculated. The weights obtained from the Barycentric Coordinates are then multiplied by the edges of the UV triangle, resulting in the UV coordinates for the sample. We then considered two sampling methods: nearest neighbor and bilinear interpolation, corresponding to respectively zero and first order interpolation. For the nearest method, the u and v axis are scaled by the height and width of the MIP level. The UV coordinates are then rounded to the nearest discrete number value, and the color for that pixel is retrieved from the texture map. On the other hand, for the bilinear method, the 4 nearest discrete points are sampled by scaling the coordinates and sampling at (floor(u), floor(v)), (floor(u), ceil(v)), (ceil(u), floor(v)), and (ceil(u), ceil(v)). The colors retrieved from the 4 sampled points are then interpolated to obtain the sample color using two lerps in x followed by one lerp in y.
+        </p>
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td>
+                        <img src="images/Task5N1.png" align="middle" width="400px" />
+                        <figcaption align="middle">Screenshot of texmap/test4.svg at supersample rate of 1 using Nearest sampling.</figcaption>
+                    </td>
+
+                    <td>
+                        <img src="images/Task5B1.png" align="middle" width="400px" />
+                        <figcaption align="middle">Screenshot of texmap/test4.svg at supersample rate of 1 using Bilinear sampling. </figcaption>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <img src="images/Task5N16.png" align="middle" width="400px" />
+                        <figcaption align="middle">Screenshot of texmap/test4.svg at supersample rate of 16 using Nearest sampling. </figcaption>
+                    </td>
+                    <td>
+                        <img src="images/Task5B16.png" align="middle" width="400px" />
+                        <figcaption align="middle">Screenshot of texmap/test4.svg at supersample rate of 16 using Nearest sampling. </figcaption>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <p>
+            Bilinear sampling is preferred for compact and/or high-frequency images. If an image is very detailed for its size, bilinear sampling will capture the details much better than the nearest sampling method. This is probably because bilinear is first order, which produces much smoother interpolation than nearest neighbor that is zero order, resulting in a better low pass filter. We note that it is possible to use even higher order interpolation, but that they are significantly slower, harder to implement and can introduce overshooting due to the oscillating nature of higher-order polynomials. However, bilinear interpolation is simple to implement (requires just three lerps), is relatively fast and cannot overshoot, i.e. its interpolated values are bounded. For this reason bilinear is very popular in computer graphics.
+        </p>
+
+        <h3 align="middle">Part 6: "Level sampling" with mipmaps for texture mapping</h3>
+        <p>Level sampling is a technique used to sample from different texture maps based on the size of the image being processed. When the image is small, taking a step in the x or y direction results in larger steps in the texture map coordinate system. This can create higher frequencies and artifacts in the image. To avoid this issue, a higher level mipmap, which is a smaller pre-filtered version of the level zero mipmap, is sampled. This helps to reduce aliasing artifacts. To implement level sampling, the first step is to calculate the (x, y) to (u, v) mapping. Next, the conversion of (x + 1, y) to (u, v) (i.e., dx) and (x, y + 1) to (u, v) (i.e., dy) is calculated. Based on the change in uv that occurs when moving one unit in xy, the appropriate level mipmap is determined. This is done by calculating the logarithm base 2 of the maximum of dx.norm and dy.norm. The resulting value is a floating point number that may fall between two levels. When using the nearest level, the float value is simply rounded, whereas when using bilinear, both floor(level) and ceil(level) are sampled and the color values are linearly interpolated between the two (with an extra lerp). Note that when performing lerp it is very important to avoid division by zero which typically can result in black pixels or artifacts called “fireflies”. Pixel sampling is the fastest and most memory efficient anti-aliasing technique since it doesn't require the storage of the multiple mipmap levels, arranged in a hierarchy, and does not incur any computational costs from computing the mipmap levels to sample from. However, because pixel sampling samples from the unfiltered level zero it does not act as a low pass filter and can therefore produce aliasing artifacts. Nearest Level sampling uses more memory, due to the multiple filtered mipmap levels and is slower, but it does perform significantly better anti aliasing. Finally, Bilinear level sampling is the slowest and has virtually the same memory footprint as Nearest Level, however it has superior performance in terms of anti-aliasing.</p>
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td>
+                        <img src="images/Task6LzPn.png" align="middle" width="400px" />
+                        <figcaption align="middle">Screenshot of texmap/test7.svg (my_png) at supersample rate of 1 using Nearest sampling and level zero.</figcaption>
+                    </td>
+
+                    <td>
+                        <img src="images/Task6LzPb.png" align="middle" width="400px" />
+                        <figcaption align="middle">Screenshot of texmap/test7.svg (my_png) at supersample rate of 1 using Bilinear sampling and level zero. </figcaption>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <img src="images/Task6LnPn.png" align="middle" width="400px" />
+                        <figcaption align="middle">Screenshot of texmap/test7.svg (my_png) at supersample rate of 1 using Nearest sampling and nearest level. </figcaption>
+                    </td>
+                    <td>
+                        <img src="images/Task6LnPb.png" align="middle" width="400px" />
+                        <figcaption align="middle">Screenshot of texmap/test7.svg (my_png) at supersample rate of 1 using Bilinear sampling and nearest level. </figcaption>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <h2 align="middle">Website Link: https://andersmuseth.github.io/proj-webpage-template/</h2>
+    </div></body>
 </html>
