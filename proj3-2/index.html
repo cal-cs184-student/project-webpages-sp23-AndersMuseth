@@ -1,7 +1,282 @@
-<html>
-	<head>
-	</head>
-	<body>
-		Project 3-2 here
-	</body>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>  
+    div.padded {  
+      padding-top: 0px;  
+      padding-right: 100px;  
+      padding-bottom: 0.25in;  
+      padding-left: 100px;  
+    }  
+  </style> 
+<title>Anders Museth |  CS 184</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="style.css" media="screen" />
+</head>
+<body>
+<br />
+<h1 align="middle">Assignment 3-2: Additional Features to PathTracer</h1>
+    <h2 align="middle">Anders Museth</h2>
+
+    <div class="padded">
+
+
+        <h3 align="middle">Overview</h3>
+        In this project, I implemented several BSDF functions for glass, mirror, refracting, and microfacet materials. This expanded my ability to render a wider range of scenes and even allowed me to create my own materials, such as Mercury and Carbon. Another notable feature I added was the ability to use a thin-lens, which enabled me to render scenes as if they had been captured by a real camera. This allowed for selective focus, with some objects appearing sharp while others were intentionally blurred. Overall, I found this project to be exceptionally satisfying as it allowed me to create complex and realistic materials, including glass objects, and to produce stunning images with the addition of thin lenses.
+        <h3 align="middle">Part 1. Mirror and Glass Materials</h3>
+
+        <p>
+            <b>
+                Show a sequence of six images of scene `CBspheres.dae` rendered with `max_ray_depth` set to 0, 1, 2, 3, 4, 5, and 100. The other settings should be at least 64 samples per pixel and 4 samples per light. Make sure to include all screenshots.
+            </b>
+        </p>
+        <p>
+            <div align="middle">
+                <table style="width:100%">
+                    <tr align="center">
+                        <td>
+                            <img src="images/CBspheres_m0.png" align="middle" width="500px" />
+                            <figcaption>max_ray_depth = 0</figcaption>
+                        </td>
+                        <td>
+                            <img src="images/CBspheres_m1.png" align="middle" width="500px" />
+                            <figcaption>max_ray_depth = 1</figcaption>
+                        </td>
+                    </tr>
+                    <tr align="center">
+                        <td>
+                            <img src="images/CBspheres_m2.png" align="middle" width="500px" />
+                            <figcaption>max_ray_depth = 2</figcaption>
+                        </td>
+                        <td>
+                            <img src="images/CBspheres_m3.png" align="middle" width="500px" />
+                            <figcaption>max_ray_depth = 3</figcaption>
+                        </td>
+                    </tr>
+                    <tr align="center">
+                        <td>
+                            <img src="images/CBspheres_m4.png" align="middle" width="500px" />
+                            <figcaption>max_ray_depth = 4</figcaption>
+                        </td>
+                        <td>
+                            <img src="images/CBspheres_m5.png" align="middle" width="500px" />
+                            <figcaption>max_ray_depth = 5</figcaption>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <br />
+            <div align="middle">
+                <img src="images/CBspheres_m100.png" align="middle" width="500px" />
+                <figcaption>max_ray_depth = 100</figcaption>
+            </div>
+        </p>
+        <br />
+        <p>
+            <b>
+                Point out the new multibounce effects that appear in each image.
+            </b>
+        </p>
+        <p>
+            Multiple bounces become more crucial when dealing with refracting materials such as glass or mirrors. This is because multiple bounces are required to achieve the desired effect. As illustrated in the image above, the glass ball appears very dark with a maximum ray depth of 2. This occurs because light takes three bounces to pass through the refracting material: the first when it hits the ball, the second when it travels inside the ball, and the third when it exits the ball.
+        </p>
+        <br />
+        <p>
+            <b>
+                Explain how these bounce numbers relate to the particular effects that appear. Make sure to include all screenshots.
+            </b>
+        </p>
+        <p>
+            <div align="middle">
+                <table style="width:100%">
+                    <tr align="center">
+                        <td>
+                            <img src="images/CBspheres_m1.png" align="middle" width="500px" />
+                            <figcaption>max_ray_depth = 1</figcaption>
+                        </td>
+                        <td>
+                            <img src="images/CBspheres_m2.png" align="middle" width="500px" />
+                            <figcaption>max_ray_depth = 2</figcaption>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            As depicted in the image above on the left, when the maximum depth is set to one, the balls only reflect light from the zeroth bounce, resulting in the rest of the ball appearing black. On the right-hand side image, the mirror ball shows light from bounces 1 and 0. This is because reflecting materials require one extra bounce to display the effects of the current maximum bounce. For example, in the case of a maximum bounce of 1, the reflecting surface can only reflect light that hits the ball and immediately bounces towards the camera. Similarly, with a maximum bounce of 2, it can only display light that has bounced once and then reaches the camera.
+            <div align="middle">
+                <img src="images/CBspheres_m3.png" align="middle" width="500px" />
+                <figcaption>max_ray_depth = 3</figcaption>
+            </div>
+            Another fascinating effect occurs because the mirror is one bounce behind. When the maximum ray depth is set to 3, we can observe in the reflection of the left ball that the right ball still appears black, much like in the case of a maximum bounce of two. This happens because light requires three bounces to pass through the glass ball and an additional fourth bounce to hit the ball and finally reach the camera.
+        </p>
+        <br />
+
+
+        <h3 align="middle">Part 2. Microfacet Material</h3>
+        <p>
+            <b>
+                Show a screenshot sequence of 4 images of scene `CBdragon_microfacet_au.dae` rendered with $\alpha$ set to 0.005, 0.05, 0.25 and 0.5. The other settings should be at least 128 samples per pixel and 1 samples per light. The number of bounces should be at least 5. Describe the differences between different images. Note that, to change the $\alpha$, just open the .dae file and search for `microfacet`.
+            </b>
+        </p>
+        <p>
+            <div align="middle">
+                <table style="width:100%">
+                    <tr align="center">
+                        <td>
+                            <img src="images/CBdragon_microfacet_au_alpha_0.005.png" align="middle" width="500px" />
+                            <figcaption>α = 0.005</figcaption>
+                        </td>
+                        <td>
+                            <img src="images/CBdragon_microfacet_au_alpha_0.05.png" align="middle" width="500px" />
+                            <figcaption>α = 0.05</figcaption>
+                        </td>
+                    </tr>
+                    <tr align="center">
+                        <td>
+                            <img src="images/CBdragon_microfacet_au_alpha_0.25.png" align="middle" width="500px" />
+                            <figcaption>α = 0.25</figcaption>
+                        </td>
+                        <td>
+                            <img src="images/CBdragon_microfacet_au_alpha_0.5.png" align="middle" width="500px" />
+                            <figcaption>α = 0.5</figcaption>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            When alpha values are low, the material appears highly glossy and almost reflective. This is because low alpha values indicate that the surface is extremely smooth at a microscopic level, allowing light to reflect in a predictable direction rather than bouncing around in random directions. As a result, the surface appears glossy and reflects a lot of light, contributing to its almost reflective appearance. As the alpha value increases, the surface becomes progressively rougher, leading to a decrease in its glossy appearance.
+        </p>
+        <br />
+        <p>
+            <b>
+                Show two images of scene `CBbunny_microfacet_cu.dae` rendered using cosine hemisphere sampling (default) and your importance sampling. The sampling rate should be fixed at 64 samples per pixel and 1 samples per light. The number of bounces should be at least 5. Briefly discuss their difference.
+            </b>
+        </p>
+        <p>
+            <div align="middle">
+                <table style="width:100%">
+                    <tr align="center">
+                        <td>
+                            <img src="images/CBbunny_microfacet_cu_hemisphere.png" align="middle" width="500px" />
+                            <figcaption>rendered using cosine hemisphere sampling</figcaption>
+                        </td>
+                        <td>
+                            <img src="images/CBbunny_microfacet_cu_importance.png" align="middle" width="500px" />
+                            <figcaption>rendered using my importance sampling</figcaption>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            As demonstrated above, using cosine hemisphere sampling results in a considerably higher amount of noise compared to importance sampling. With importance sampling, the scene converges much faster. However, it is worth noting that as the number of samples approaches infinity, both methods should converge to the same result.
+        </p>
+        <br />
+        <p>
+            <b>
+                Show at least one image with some other conductor material, replacing `eta` and `k`. Note that you should look up values for real data rather than modifying them arbitrarily. Tell us what kind of material your parameters correspond to.
+            </b>
+        </p>
+        <p>
+            <div align="middle">
+                <table style="width:100%">
+                    <tr align="center">
+                        <td>
+                            <img src="images/CBdragon_microfacet_c.png" align="middle" width="500px" />
+                            <figcaption>Eta and k changed to be the material carbon (c)</figcaption>
+                        </td>
+                        <td>
+                            <img src="images/CBdragon_microfacet_hg.png" align="middle" width="500px" />
+                            <figcaption>Eta and k were changed to be the material Mercury (Hg)</figcaption>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            The dragon on the left has been modified with parameters that mimic Carbon, resulting in a sleek black appearance. On the other hand, the dragon on the right has been altered with parameters that resemble Mercury, giving it a silver-like appearance.
+        </p>
+        <br />
+
+
+        <h3 align="middle">Part 4. Depth of Field</h3>
+        <b>
+            For these subparts, we recommend using a microfacet BSDF scene to show off the cool out of focus effects you can get with depth of field!
+        </b>
+        <p>
+            <b>
+                In a few sentences, explain the differences between a pinhole camera model and a thin-lens camera model.
+            </b>
+        </p>
+        <p>
+            When using the pinhole camera model, all the light passes through a single point, resulting in the entire image being in focus. This is because, by only allowing light to pass through one point, we ensure that light arrives at the image plane from only one direction in the scene, resulting in a sharp image. However, with the thin-lens camera model, we simulate a lens by refracting light to a certain focal point. This means that light from different directions can converge at the same point on the image plane, causing certain areas to be in focus while others are blurry or out of focus. This is similar to how our eyes and cameras work, where the lens in our eye or camera adjusts to focus on objects at different distances.
+        </p>
+        <br />
+        <p>
+            <b>
+                Show a "focus stack" where you focus at 4 visibly different depths through a scene. Make sure to include all screenshots.
+            </b>
+        </p>
+        <p>
+            <div align="middle">
+                <table style="width:100%">
+                    <tr align="center">
+                        <td>
+                            <img src="images/CBdragon_microfacet_hg_d_4.0.png" align="middle" width="500px" />
+                            <figcaption>Focal distance = 4.0 (lens radius = 0.23)</figcaption>
+                        </td>
+                        <td>
+                            <img src="images/CBdragon_microfacet_hg_d_4.5.png" align="middle" width="500px" />
+                            <figcaption>Focal distance = 4.5 (lens radius = 0.23)</figcaption>
+                        </td>
+                    </tr>
+                    <tr align="center">
+                        <td>
+                            <img src="images/CBdragon_microfacet_hg_d_5.0.png" align="middle" width="500px" />
+                            <figcaption>Focal distance = 5.0 (lens radius = 0.23)</figcaption>
+                        </td>
+                        <td>
+                            <img src="images/CBdragon_microfacet_hg_d_5.5.png" align="middle" width="500px" />
+                            <figcaption>Focal distance = 5.5 (lens radius = 0.23)</figcaption>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <div align="middle">
+                <img src="images/CBdragon_microfacet_hg_d_6.0.png" align="middle" width="500px" />
+                <figcaption>Focal distance = 6.0 (lens radius = 0.23)</figcaption>
+            </div>
+        </p>
+        <br />
+        <p>
+            <b>
+                Show a sequence of 4 pictures with visibly different aperture sizes, all focused at the same point in a scene. Make sure to include all screenshots.
+            </b>
+        </p>
+        <p>
+            <div align="middle">
+                <table style="width:100%">
+                    <tr align="center">
+                        <td>
+                            <img src="images/CBdragon_microfacet_c_d_4.5_b_0.1.png" align="middle" width="500px" />
+                            <figcaption>Lens radius = 0.1 (focal distance = 4.5)</figcaption>
+                        </td>
+                        <td>
+                            <img src="images/CBdragon_microfacet_c_d_4.5_b_0.15.png" align="middle" width="500px" />
+                            <figcaption>Lens radius = 0.15 (focal distance = 4.5)</figcaption>
+                        </td>
+                    </tr>
+                    <tr align="center">
+                        <td>
+                            <img src="images/CBdragon_microfacet_c_d_4.5_b_0.2.png" align="middle" width="500px" />
+                            <figcaption>Lens radius = 0.2 (focal distance = 4.5)</figcaption>
+                        </td>
+                        <td>
+                            <img src="images/CBdragon_microfacet_c_d_4.5_b_0.25.png" align="middle" width="500px" />
+                            <figcaption>Lens radius = 0.25 (focal distance = 4.5)</figcaption>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </p>
+        <p></p>
+        <br />
+
+    </div>
+</body>
 </html>
+
